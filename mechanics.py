@@ -16,9 +16,9 @@ class Platform:
         self.vertices = center_dist*np.array([[np.cos(i*self.angle), np.sin(i*self.angle), 0]
                                               for i in range(tethering_points)])
 
-    def plot(self, projection='xy'):
+    def plot(self, axes=[0, 1]):
         fig = plt.figure()
-        ax1 = fig.add_axes([0, 0, 1, 1])
-        ax1.plot(self.vertices[:, :, 0])
+        ax = fig.add_axes([0, 0, 1, 1])
+        ax1, ax2 = axes
+        ax.scatter(self.vertices.T[ax1], self.vertices.T[ax2])
         plt.show()
-
