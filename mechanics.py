@@ -3,7 +3,7 @@ import numpy as np
 
 
 class Platform:
-    def __init__(self, tethering_points=3, center_dist=3, center=np.array([0., 0., 0.])):
+    def __init__(self, tethering_points=3, center_dist=3, center=np.array([0., 0., 0.]), shape='triangle'):
         """
 
         :param tethering_points: int, number of tethering points
@@ -15,10 +15,18 @@ class Platform:
         self.center = center
         self.vertices = center_dist*np.array([[np.cos(i*self.angle), np.sin(i*self.angle), 0]
                                               for i in range(tethering_points)])
+        if shape == 'triangle':  # draw straight lines between tethering points
+            side1 = [self.vertices[0], self.vertices[1]]
+            side2 = [self.vertices[1], self.vertices[2]]
+
+            #self.sides = np.array([side1, side2])
+            self.sides = np.array([[self.vertices[i], self.vertices[(i+1) % tethering_points]] for i in range(tethering_points)])
+        #self.sides = np.array([self.vertices[(i+1) % tethering_points]-self.vertices[i] for i in range(tethering_points)])
 
     def plot(self, axes=[0, 1]):
         fig = plt.figure()
         ax = fig.add_axes([0, 0, 1, 1])
         ax1, ax2 = axes
         ax.scatter(self.vertices.T[ax1], self.vertices.T[ax2])
+        ax.plot(self.sides.T[ax1], self.sides.T[ax2], c='k')
         plt.show()
