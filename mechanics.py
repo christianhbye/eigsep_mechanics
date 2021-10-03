@@ -36,7 +36,8 @@ class Platform:
             m = self.vertices[0] + x/2  # midpoint on the side
             cm = x/(2*np.sqrt(3))  # length from m to center c
             cm_dir = self.vertices[2] - m  # direction to center from midpoint
-            c = cm_dir/np.linalg.norm(cm_dir) * cm  # make cm_dir a unit vector and multiply by the length
+            cm_vec = cm_dir/np.linalg.norm(cm_dir) * cm  # make cm_dir a unit vector and multiply by the length
+            c = m + cm_vec
             return c
 
     def translate_z(self, dz):
@@ -44,6 +45,8 @@ class Platform:
         self.vertices[:, 2] += dz
         self.normal_vector = np.cross(self.vertices[1]-self.vertices[0], self.vertices[2]-self.vertices[0])
         self.polar_angle = np.arccos(self.normal_vector[-1]/np.linalg.norm(self.normal_vector)) * 180/np.pi
+        assert self.polar_angle <= self.pointing_accuracy, \
+            'Pointing accuracy requirement violated, polar angle = {:.2f} deg'.format(self.polar_angle)
         if self.shape == 'triangle':  # draw straight lines between tethering points and define a center
             self.sides = np.array([[self.vertices[i], self.vertices[(i+1) % self.tethering_points]]
                                    for i in range(self.tethering_points)])
@@ -61,7 +64,7 @@ class Platform:
         ax.plot(self.sides.T[ax1], self.sides.T[ax2], c='k')
         ax.plot([self.center[ax1], self.normal_vector[ax1]], [self.center[ax2], self.normal_vector[ax2]])
         if ax2 == 2:
-            ax.axvline(self.center[ax1], ls='--', c='k')
+            ax.axvline(0, ls='--', c='k')
         ax.set_xlabel(chr(120+ax1))
         ax.set_ylabel(chr(120+ax2))
         return fig, ax
@@ -71,17 +74,17 @@ class Anchor:
     """
     Assumes same coordinate system as Platform class
     """
-    def __init__(self, r=80, h=30, rope_length=90, anchor_points=3):
+    def __init__(self, r=80, h=30, rope_lengths=np.array([80, 80, 80]), anchor_points=3):
 
         self.angle = 2 * np.pi/anchor_points
         self.anchor_points = anchor_points
         self.vertices = np.array([[r*np.cos(i*self.angle+np.pi/2), r*np.sin(i*self.angle+np.pi/2), h]
                                   for i in range(anchor_points)])
-        self.rope_length = rope_length
+        self.rope_lengths = rope_lengths
 
     def attach_platform(self, platform):
         offsets_xy = self.vertices[:, :2] - platform.vertices[:, :2]  # rope must cover this offset to fix xy-coords
-        rope_z = np.sqrt(self.rope_length**2 - (offsets_xy[:, 0]**2 + offsets_xy[:, 1]**2))  # remaining rope in z-dir
+        rope_z = np.sqrt(self.rope_lengths**2 - (offsets_xy[:, 0]**2 + offsets_xy[:, 1]**2))  # remaining rope in z-dir
         dz = self.vertices[:, 2] - rope_z - platform.vertices[:, 2]  # delta between end of rope and platform vertices
         platform.translate_z(dz)  # update position of platform
 
