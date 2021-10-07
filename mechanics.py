@@ -105,9 +105,9 @@ class Forces(Components):
     #     super().__init__(**kwargs)
 
     def gravity(self, rope_density=3.4):
-        f_tot = super().platform_mass  # total force (in units of g))
-        rope_length_total = np.sum(super().rope_lengths) * 2  # from anchors to platform, *2 for 2 ropes per tethering pt
-        rope_length_total += np.sum(super().anchor_vertices[:, -1])  # from platform to ground (assume perfectly vertical)
+        f_tot = self.platform_mass  # total force (in units of g))
+        rope_length_total = np.sum(self.rope_lengths) * 2  # from anchors to platform, *2 for 2 ropes per tethering pt
+        rope_length_total += np.sum(self.anchor_vertices[:, -1])  # from platform to ground (assume perfectly vertical)
         # rope_length_total += ropes from pulley to ground ...
         rope_mass = rope_length_total * rope_density
         f_tot += rope_mass
