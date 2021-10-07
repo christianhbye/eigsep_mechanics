@@ -3,7 +3,7 @@ import numpy as np
 
 class Components:
     def __init__(self, r_anchor=100, h_anchor=150, rope_lengths=np.array([120, 120, 120]), anchor_points=3,
-                 r_platform=3, tethering_points=3):
+                 r_platform=3, tethering_points=3, platform_mass=50):
         self.pointing_accuracy = 5.  # degrees
         # anchor parameters
         self.r_anchor = r_anchor  # cylindrical r-coordinate for anchors
@@ -17,10 +17,10 @@ class Components:
                                          for i in range(anchor_points)])
         # platform parameters
         self.tethering_points = tethering_points  # number of tethering points
-        self.platform_angle = 2*np.pi/tethering_points  # azimuth-coordinate for tethering points
         self.r_platform = r_platform  # cylindrical r-coordinate for tethering points
-        self.platform_vertices = np.array([[r_platform*np.cos(i*self.platform_angle + np.pi/2),
-                                            r_platform*np.sin(i*self.platform_angle + np.pi/2),
+        self.platform_angles = [i*2*np.pi/tethering_points + np.pi/2 for i in range(tethering_points)]  # azimuthal
+        self.platform_vertices = np.array([[r_platform*np.cos(self.platform_angles[i]),
+                                            r_platform*np.sin(self.platform_angles[i]),
                                             0]
                                            for i in range(tethering_points)])  # initialized on the ground (z=0)
         normal_vector = np.cross(self.platform_vertices[1] - self.platform_vertices[0],
@@ -31,6 +31,7 @@ class Components:
             [[self.platform_vertices[i], self.platform_vertices[(i + 1) % self.tethering_points]]
              for i in range(self.tethering_points)])
         self.platform_center = np.zeros(3)
+        self.platform_mass = platform_mass
 
     def compute_unit_normal(self):
         normal_vector = np.cross(self.platform_vertices[1] - self.platform_vertices[0],
@@ -97,3 +98,30 @@ class Components:
             ropes_y = [self.platform_vertices[i][ax2], self.anchor_vertices[i][ax2]]
             ax.plot(ropes_x, ropes_y, c='blue')
 
+
+class Forces(Components):
+
+    def gravity(self, rope_density=3.4):
+        f_tot = self.platform_mass  # total force (in units of g))
+        rope_length_total = np.sum(self.rope_lengths) * 2  # from anchors to platform, *2 for 2 ropes per tethering pt
+        rope_length_total += np.sum(self.anchor_vertices[:, -1])  # from platform to ground (assume perfectly vertical)
+        # rope_length_total += ropes from pulley to ground ...
+        rope_mass = rope_length_total * rope_density
+        f_tot += rope_mass
+        return f_tot
+
+    def tension_down(self, pulling_tension=10):
+        return pulling_tension * self.tethering_points  # tension in each of the vertical ropes going down
+
+    def tensions(self):
+        total_force_down = self.gravity() + self.tension_down()
+
+        # angles of ropes
+        polar_angles = [np.arccos(self.platform_vertices[i, -1]/np.linalg.norm(self.platform_vertices[i]))
+                        for i in range(self.tethering_points)]
+        azimuthal_angles = self.platform_angles
+
+        # balance forces (a's are polar, b's are azimuthal)
+        # x-equation: T1*sin(a1)*cos(b1) + T2*sin(a2)*cos(b2) + T3*sin(a3)*cos(b3) = 0
+        # y-equation: T1*sin(a1)*sin(b1) + T2*sin(a2)*sin(b2) + T3*sin(a3)*sin(b3) = 0
+        # z_equation: T1*cos(a1) + T2*cos(a2) + T3*cos(a3) = total force down
