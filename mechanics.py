@@ -125,3 +125,12 @@ class Forces(Components):
         # x-equation: T1*sin(a1)*cos(b1) + T2*sin(a2)*cos(b2) + T3*sin(a3)*cos(b3) = 0
         # y-equation: T1*sin(a1)*sin(b1) + T2*sin(a2)*sin(b2) + T3*sin(a3)*sin(b3) = 0
         # z_equation: T1*cos(a1) + T2*cos(a2) + T3*cos(a3) = total force down
+        coeff_matrix = np.array([
+            [np.sin(polar_angles[i])*np.cos(azimuthal_angles[i]) for i in range(self.tethering_points)],
+            [np.sin(polar_angles[i])*np.sin(azimuthal_angles[i]) for i in range(self.tethering_points)],
+            [np.cos(polar_angles[i]) for i in range(self.tethering_points)]
+        ])
+        rhs_vector = np.array([0, 0, total_force_down]).T
+        solution = np.linalg.inv(coeff_matrix).dot(rhs_vector)
+        t1, t2, t3 = solution  # tensions
+        return t1, t2, t3
