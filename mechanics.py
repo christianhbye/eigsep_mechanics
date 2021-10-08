@@ -101,8 +101,9 @@ class Components:
 
 class Forces(Components):
 
-    # def __init__(self, **kwargs):
-    #     super().__init__(**kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        super().attach_platform()
 
     def gravity(self, rope_density=3.4):
         f_tot = self.platform_mass  # total force (in units of g))
@@ -146,10 +147,6 @@ class Forces(Components):
         # y-equation: T1*sin(a1)*sin(b1) + T2*sin(a2)*sin(b2) + T3*sin(a3)*sin(b3) = 0
         # z_equation: T1*cos(a1) + T2*cos(a2) + T3*cos(a3) = total force down
         norms = [np.linalg.norm(self.platform_vertices[i, :]) for i in range(self.tethering_points)]
-        print(self.platform_vertices)
-        print(self.platform_vertices)
-        print(norms)
-        print(norms[0])
         coeff_matrix = np.empty((3, 3))
         for i in range(3):  # each row is for the different components (row 1 = eqn for x component)
             for j in range(3):  # each column is for the different tethering point
