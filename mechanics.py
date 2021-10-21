@@ -99,40 +99,44 @@ class Components:
             ax.plot(ropes_x, ropes_y, c='blue')
 
 
-class Forces(Components):
+class Forces:
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        super().attach_platform()
+    # def __init__(self, **kwargs):
+    #     super().__init__(**kwargs)
+    #     super().attach_platform()
+    def __init__(self, components, rope_density=3.4, pulling_tension=10):
+        self.components = components
+        self.rope_density = rope_density
+        self.pulling_tension = pulling_tension
 
-    def gravity(self, rope_density=3.4):
-        f_tot = self.platform_mass  # total force (in units of g))
-        rope_length_total = np.sum(self.rope_lengths) * 2  # from anchors to platform, *2 for 2 ropes per tethering pt
-        rope_length_total += np.sum(self.anchor_vertices[:, -1])  # from platform to ground (assume perfectly vertical)
+    def gravity(self):
+        f_tot = self.components.platform_mass  # total force (in units of g))
+        rope_length_total = np.sum(self.components.rope_lengths) * 2  # from anchors to platform, *2 for 2 ropes per tethering pt
+        rope_length_total += np.sum(self.components.anchor_vertices[:, -1])  # from platform to ground (assume perfectly vertical)
         # rope_length_total += ropes from pulley to ground ...
-        rope_mass = rope_length_total * rope_density
+        rope_mass = rope_length_total * self.rope_density
         f_tot += rope_mass
         return f_tot
 
-    def tension_down(self, pulling_tension=10):
-        return pulling_tension * self.tethering_points  # tension in each of the vertical ropes going down
+    def tension_down(self):
+        return self.pulling_tension * self.components.tethering_points  # tension in each of the vertical ropes going down
 
     def tensions(self):
         total_force_down = self.gravity() + self.tension_down()
 
         # angles of ropes
-        polar_angles = [np.arccos(self.platform_vertices[i, -1]/np.linalg.norm(self.platform_vertices[i]))
-                        for i in range(self.tethering_points)]
-        azimuthal_angles = self.platform_angles
+        polar_angles = [np.arccos(self.components.platform_vertices[i, -1]/np.linalg.norm(self.components.platform_vertices[i]))
+                        for i in range(self.components.tethering_points)]
+        azimuthal_angles = self.components.platform_angles
 
         # balance forces (a's are polar, b's are azimuthal)
         # x-equation: T1*sin(a1)*cos(b1) + T2*sin(a2)*cos(b2) + T3*sin(a3)*cos(b3) = 0
         # y-equation: T1*sin(a1)*sin(b1) + T2*sin(a2)*sin(b2) + T3*sin(a3)*sin(b3) = 0
         # z_equation: T1*cos(a1) + T2*cos(a2) + T3*cos(a3) = total force down
         coeff_matrix = np.array([
-            [np.sin(polar_angles[i])*np.cos(azimuthal_angles[i]) for i in range(self.tethering_points)],
-            [np.sin(polar_angles[i])*np.sin(azimuthal_angles[i]) for i in range(self.tethering_points)],
-            [np.cos(polar_angles[i]) for i in range(self.tethering_points)]
+            [np.sin(polar_angles[i])*np.cos(azimuthal_angles[i]) for i in range(self.components.tethering_points)],
+            [np.sin(polar_angles[i])*np.sin(azimuthal_angles[i]) for i in range(self.components.tethering_points)],
+            [np.cos(polar_angles[i]) for i in range(self.components.tethering_points)]
         ])
         rhs_vector = np.array([0, 0, total_force_down]).T
         solution = np.linalg.inv(coeff_matrix).dot(rhs_vector)
@@ -146,13 +150,16 @@ class Forces(Components):
         # x-equation: T1*sin(a1)*cos(b1) + T2*sin(a2)*cos(b2) + T3*sin(a3)*cos(b3) = 0
         # y-equation: T1*sin(a1)*sin(b1) + T2*sin(a2)*sin(b2) + T3*sin(a3)*sin(b3) = 0
         # z_equation: T1*cos(a1) + T2*cos(a2) + T3*cos(a3) = total force down
-        norms = [np.linalg.norm(self.platform_vertices[i, :]) for i in range(self.tethering_points)]
+        norms = [np.linalg.norm(self.components.platform_vertices[i, :]) for i in range(self.components.tethering_points)]
         coeff_matrix = np.empty((3, 3))
         for i in range(3):  # each row is for the different components (row 1 = eqn for x component)
             for j in range(3):  # each column is for the different tethering point
-                coeff_matrix[i, j] = self.platform_vertices[j, i] / norms[j]
+                coeff_matrix[i, j] = self.components.platform_vertices[j, i] / norms[j]
         rhs_vector = np.array([0, 0, total_force_down]).T
         solution = np.linalg.inv(coeff_matrix).dot(rhs_vector)
         t1, t2, t3 = solution  # tensions
         return t1, t2, t3
+
+#class Simulator:
+
 
